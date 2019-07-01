@@ -434,23 +434,12 @@ annotateCoverage(TConfig& c, TSampleLibrary& sampleLib, TCovRecord& ict, TCovera
       std::sort(spanPoint.begin(), spanPoint.end(), SortBp<SpanPoint>());
       
       // Count reads
-      hts_itr_t* iter;
-      bam1_t* rec;
       int32_t lastAlignedPos = 0;
-      int next_err;
       std::set<std::size_t> lastAlignedPosReads;
-      #pragma omp critical
-      {
-        iter = sam_itr_queryi(myidx, refIndex, 0, hdr[file_c]->target_len[refIndex]);
-        rec = bam_init1();
-      }
-      while (1) {
-	#pragma omp critical
-	{
-	  next_err = sam_itr_next(mysamfile, iter, rec);
-	}
-        if (next_err < 0) break;
+      hts_itr_t* iter = sam_itr_queryi(myidx, refIndex, 0, hdr[file_c]->target_len[refIndex]);
+      bam1_t* rec = bam_init1();
 
+      while (sam_itr_next(mysamfile, iter, rec) >= 0) {
 	if (rec->core.flag & (BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | BAM_FSUPPLEMENTARY | BAM_FUNMAP | BAM_FMUNMAP)) continue;
 	if (rec->core.qual < c.minGenoQual) continue;
 
@@ -770,11 +759,8 @@ discard:
 	}
       }
 
-      #pragma omp critical
-      {
-        hts_idx_destroy(myidx);
-        sam_close(mysamfile);
-      }
+      hts_idx_destroy(myidx);
+      sam_close(mysamfile);
     }
   }
   // Clean-up
